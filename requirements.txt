@@ -1,0 +1,4 @@
+# The menu-driven application (main.py) needs NO packages. Plain Python is enough.
+# These two are optional extras:
+flask>=3.0      # only for the visual dashboard (menu option 10)
+pypdf>=4.0      # only for reading the text out of PDF files

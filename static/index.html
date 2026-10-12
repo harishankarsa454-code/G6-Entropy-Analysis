@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entropy Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap">
+<style>
+/* Layout: an instrument console. One wide column. Hero = statement left, live byte field right.
+   The lab = controls rail left, readouts right. Experiments sit as paired panels below. */
+:root{
+  color-scheme: dark;
+  --bg:#080a12; --bg-2:#0c0f1a; --panel:#10141f; --panel-2:#171c2b; --line:#1f2536; --line-2:#2f3855;
+  --fg:#eef0f7; --fg-2:#b4b9cf; --muted:#7c83a1;
+  --accent:#e6cf9c; --accent-2:#c9a85c; --accent-ink:#17120a; --glow:rgba(230,207,156,.12);
+  --s-plain:#8f96b3; --s-classical:#3987e5; --s-stream:#d95926; --s-transform:#199e70;
+  --shadow:0 30px 80px -40px rgba(0,0,0,.8);
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --r:16px; --ease:cubic-bezier(.2,.75,.2,1);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme: light;
+    --bg:#f1f2f6; --bg-2:#e8eaf1; --panel:#ffffff; --panel-2:#f3f4f9; --line:#dfe2ec; --line-2:#c2c8da;
+    --fg:#0c1024; --fg-2:#3c4260; --muted:#6a7090;
+    --accent:#7a5a14; --accent-2:#a37b23; --accent-ink:#fffaf0; --glow:rgba(122,90,20,.09);
+    --s-plain:#7f86a3; --s-classical:#2a78d6; --s-stream:#eb6834; --s-transform:#1baf7a;
+    --shadow:0 30px 70px -45px rgba(20,26,60,.35);
+  }
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#f1f2f6; --bg-2:#e8eaf1; --panel:#ffffff; --panel-2:#f3f4f9; --line:#dfe2ec; --line-2:#c2c8da;
+  --fg:#0c1024; --fg-2:#3c4260; --muted:#6a7090;
+  --accent:#7a5a14; --accent-2:#a37b23; --accent-ink:#fffaf0; --glow:rgba(122,90,20,.09);
+  --s-plain:#7f86a3; --s-classical:#2a78d6; --s-stream:#eb6834; --s-transform:#1baf7a;
+  --shadow:0 30px 70px -45px rgba(20,26,60,.35);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{background:var(--bg);color:var(--fg);font:400 15px/1.55 var(--body);-webkit-font-smoothing:antialiased;overflow-x:clip}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;letter-spacing:-.025em;line-height:1.02}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1320px;margin-inline:auto;padding-inline:clamp(16px,4vw,40px)}
+
+/* scroll progress */
+.progress{position:fixed;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--accent-2),var(--accent));transform-origin:0 50%;transform:scaleX(0);z-index:60}
+@supports (animation-timeline: scroll()){
+  .progress{animation:grow linear both;animation-timeline:scroll(root)}
+}
+@keyframes grow{to{transform:scaleX(1)}}
+
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);background:color-mix(in srgb,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;gap:20px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font:650 17px/1 var(--display);letter-spacing:-.02em;text-decoration:none;color:var(--fg);white-space:nowrap;flex:none}
+.brand-mark{display:flex;align-items:flex-end;gap:2px;height:18px}
+.brand-mark i{width:3px;border-radius:2px 2px 0 0;background:var(--accent);animation:eq 2.6s var(--ease) infinite alternate}
+.brand-mark i:nth-child(1){height:30%;animation-delay:-.2s}.brand-mark i:nth-child(2){height:100%;animation-delay:-1.1s}
+.brand-mark i:nth-child(3){height:55%;animation-delay:-.6s}.brand-mark i:nth-child(4){height:80%;animation-delay:-1.7s}
+@keyframes eq{0%{transform:scaleY(.45)}100%{transform:scaleY(1)}}
+.brand-mark i{transform-origin:50% 100%}
+.nav-links{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.nav-links a{color:var(--fg-2);text-decoration:none;font-size:13.5px;padding:8px 12px;border-radius:999px;white-space:nowrap;transition:color .2s,background .2s}
+.nav-links a:hover{color:var(--fg);background:var(--panel-2)}
+.nav-tag{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line-2);padding:6px 9px;border-radius:999px;white-space:nowrap}
+@media (max-width:720px){.nav-tag{display:none}.nav-links a{padding:8px 9px}}
+
+/* hero */
+.hero{position:relative;padding-block:clamp(40px,7vw,84px) clamp(36px,5vw,64px)}
+.hero::before{content:"";position:absolute;top:-60px;bottom:0;left:calc(50% - 50vw);right:calc(50% - 50vw);z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(620px 380px at 78% 30%,var(--glow),transparent 70%),
+    radial-gradient(480px 300px at 8% 0%,color-mix(in srgb,var(--s-classical) 12%,transparent),transparent 70%),
+    linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 44px,
+    linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/44px 100%;
+  -webkit-mask-image:radial-gradient(ellipse 75% 85% at 50% 30%,#000 30%,transparent 78%);mask-image:radial-gradient(ellipse 75% 85% at 50% 30%,#000 30%,transparent 78%);opacity:.9}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:clamp(28px,4vw,56px);align-items:center}
+@media (max-width:940px){.hero-grid{grid-template-columns:minmax(0,1fr)}}
+.eyebrow{font:500 11.5px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.hero h1{font-size:clamp(40px,5.9vw,78px);font-weight:700;margin-block:18px 20px}
+.hero h1 em{font-style:normal;color:var(--accent);position:relative;white-space:nowrap}
+.hero h1 em::after{content:"";position:absolute;left:0;right:0;bottom:.04em;height:.07em;background:var(--accent);opacity:.35;transform-origin:0 50%;animation:under 1.1s .9s var(--ease) both}
+@keyframes under{from{transform:scaleX(0)}}
+.lede{font-size:clamp(16px,1.5vw,18.5px);color:var(--fg-2);max-width:56ch}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px;align-items:center}
+.hero-facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:30px;color:var(--muted);font-size:13px}
+.hero-facts b{font:600 13px var(--mono);color:var(--fg)}
+.up{animation:up .9s var(--ease) both}
+.up.d1{animation-delay:.08s}.up.d2{animation-delay:.16s}.up.d3{animation-delay:.26s}.up.d4{animation-delay:.36s}.up.d5{animation-delay:.2s}
+@keyframes up{from{opacity:0;transform:translateY(22px)}}
+
+.btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line-2);background:var(--panel);color:var(--fg);padding:11px 18px;border-radius:999px;font-weight:550;font-size:14.5px;text-decoration:none;position:relative;overflow:hidden;transition:transform .25s var(--ease),border-color .25s,box-shadow .25s}
+.btn:hover{transform:translateY(-1px);border-color:var(--accent-2)}
+.btn:active{transform:translateY(0) scale(.985)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 10px 30px -12px var(--accent-2)}
+.btn.primary::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);transition:transform .7s var(--ease)}
+.btn.primary:hover::after{transform:translateX(120%)}
+.btn.small{padding:7px 13px;font-size:13px}
+.btn svg{width:15px;height:15px;flex:none}
+
+/* panels */
+.panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);isolation:isolate}
+.panel::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;opacity:0;transition:opacity .4s;
+  background:radial-gradient(380px circle at var(--mx,50%) var(--my,0%),var(--glow),transparent 65%)}
+.panel:hover::before{opacity:1}
+.pad{padding:clamp(16px,2vw,24px)}
+.label{font:500 11px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* hero instrument */
+.scope{overflow:hidden}
+.scope-head,.scope-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.scope-foot{border-bottom:0;border-top:1px solid var(--line);align-items:flex-end}
+.live{display:inline-flex;align-items:center;gap:8px}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--s-transform);box-shadow:0 0 0 0 var(--s-transform);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+#heroCanvas{display:block;width:100%;height:288px}
+.scope-h{font:600 clamp(34px,4.4vw,48px)/1 var(--body);letter-spacing:-.03em}
+.scope-h small{font:500 12px var(--mono);color:var(--muted);letter-spacing:0;margin-left:6px}
+.meter{position:relative;height:8px;border-radius:999px;background:var(--panel-2);overflow:visible}
+.meter>i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,var(--accent-2),var(--accent));width:0;transition:width .5s var(--ease)}
+.meter>b{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--line-2)}
+.scope-meter{flex:1 1 200px;min-width:0;display:grid;gap:8px}
+.scope-meter .ticks{display:flex;justify-content:space-between;font:500 10.5px var(--mono);color:var(--muted)}
+.formula{font:500 12.5px var(--mono);color:var(--fg-2)}
+
+/* menu */
+.menu{display:grid;gap:12px;padding-block:8px 4px}
+.menu ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+@media (max-width:1100px){.menu ol{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.menu ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.menu a{display:flex;gap:11px;align-items:flex-start;height:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--fg);text-decoration:none;transition:transform .25s var(--ease),border-color .25s,background .25s}
+.menu a:hover{transform:translateY(-2px);border-color:var(--accent-2);background:var(--panel-2)}
+.menu b{font:600 12px/1 var(--mono);color:var(--accent-ink);background:var(--accent);border-radius:6px;padding:5px 7px;flex:none}
+.menu span{display:grid;gap:3px;font-weight:550;font-size:14px;line-height:1.25;min-width:0}
+.menu small{font-weight:400;font-size:12px;color:var(--muted);line-height:1.35}
+
+#table th:last-child,#table td:last-child{text-align:left}
+
+/* sections */
+section{padding-block:clamp(36px,5vw,68px)}
+.sec-head{display:grid;gap:12px;margin-bottom:26px;max-width:760px}
+.sec-head h2{font-size:clamp(28px,3.6vw,46px);font-weight:650}
+.sec-head p{color:var(--fg-2);font-size:16px;max-width:64ch}
+@supports (animation-timeline: view()){
+  @media (prefers-reduced-motion: no-preference){
+    .reveal{animation:rise linear both;animation-timeline:view();animation-range:entry 0% entry 32%}
+  }
+}
+@keyframes rise{from{opacity:.25;transform:translateY(34px) scale(.985)}}
+
+/* lab layout */
+.lab{display:grid;grid-template-columns:minmax(0,372px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1020px){.lab{grid-template-columns:minmax(0,1fr)}}
+.stack{display:grid;gap:20px;min-width:0}
+.field{display:grid;gap:7px;min-width:0}
+.field label,.field .label{font:500 11px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.input{width:100%;min-width:0;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;transition:border-color .2s,box-shadow .2s}
+.input:focus{outline:none;border-color:var(--accent-2);box-shadow:0 0 0 3px var(--glow)}
+textarea.input{min-height:150px;resize:vertical;font:400 13px/1.6 var(--mono)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.keys{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px}
+.hint{font-size:12.5px;color:var(--muted)}
+.drop{display:flex;align-items:center;gap:12px;border:1px dashed var(--line-2);border-radius:12px;padding:12px 14px;color:var(--fg-2);font-size:13.5px;transition:border-color .2s,background .2s,transform .2s;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--glow)}
+.drop.over{transform:scale(1.01)}
+.drop svg{width:20px;height:20px;flex:none;color:var(--accent)}
+.drop u{color:var(--fg);text-underline-offset:3px}
+.filechip{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px 8px 12px;font-size:13px;min-width:0}
+.filechip span{min-width:0;overflow-wrap:anywhere}
+.filechip button{margin-left:auto;border:0;background:none;color:var(--muted);padding:4px 6px;border-radius:6px;flex:none}
+.filechip button:hover{color:var(--fg);background:var(--line)}
+.status{font-size:13px;color:var(--fg-2)}
+.status.err{color:var(--s-stream)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid var(--line);background:var(--bg-2);color:var(--fg-2);border-radius:999px;padding:6px 11px;font-size:12.5px;display:inline-flex;align-items:center;gap:7px;transition:all .2s var(--ease)}
+.chip:hover{border-color:var(--line-2);color:var(--fg);transform:translateY(-1px)}
+.chip[aria-pressed="true"]{background:var(--panel-2);border-color:var(--line-2);color:var(--fg)}
+.chip[aria-pressed="false"] .dot{opacity:.25}
+.chip:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--s-plain)}
+.fam-classical{background:var(--s-classical)}.fam-stream{background:var(--s-stream)}.fam-transform{background:var(--s-transform)}.fam-plain{background:var(--s-plain)}
+.seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;color:var(--fg-2);padding:6px 12px;border-radius:999px;font-size:12.5px;transition:all .2s}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--fg);box-shadow:0 0 0 1px var(--line-2)}
+.group-title{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--fg-2);margin-bottom:8px}
+
+/* stat tiles */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{padding:16px 18px;display:grid;gap:8px;align-content:start;min-width:0}
+.stat .v{font:600 clamp(24px,2.6vw,32px)/1 var(--body);letter-spacing:-.03em}
+.stat .v small{font:500 12px var(--mono);color:var(--muted);letter-spacing:0;margin-left:4px}
+.stat .sub{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+
+/* results */
+.insp{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:clamp(20px,3vw,40px);align-items:start}
+@media (max-width:860px){.insp{grid-template-columns:minmax(0,1fr)}}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.panel-head h3{font-size:19px;font-weight:650;letter-spacing:-.015em;line-height:1.2}
+.insight{color:var(--fg-2);font-size:14.5px;margin-bottom:16px;max-width:66ch}
+.insight b{color:var(--fg);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--fg-2);margin-bottom:12px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.key-line{width:16px;height:2px;border-radius:2px;background:var(--s-plain);flex:none}
+
+.bars{display:grid;grid-template-columns:minmax(92px,auto) minmax(0,1fr) auto auto;column-gap:16px;row-gap:2px;position:relative}
+.bars-grid{grid-column:2;position:relative;pointer-events:none;z-index:0}
+.bars-grid i{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.bars-grid i.ref{background:var(--line-2)}
+.bars-top,.bars-axis{grid-column:2;position:relative;height:18px;font:500 10.5px var(--mono);color:var(--muted)}
+.bars-top>span,.bars-axis>span{position:absolute;white-space:nowrap}
+.bars-axis>span{transform:translateX(-50%);top:4px}
+.bars-axis>span:first-child{transform:none}.bars-axis>span:last-child{transform:translateX(-100%)}
+.bars-top>span{transform:translateX(-100%);padding-right:5px}
+.bars-group{grid-column:1/-1;font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:10px 0 3px 8px}
+.bar-row{display:grid;grid-template-columns:subgrid;grid-column:1/-1;align-items:center;border:0;background:none;text-align:left;padding:5px 8px;margin-inline:-8px;border-radius:9px;position:relative;z-index:1;transition:background .2s}
+.bar-row:hover{background:color-mix(in srgb,var(--panel-2) 70%,transparent)}
+.bar-row[aria-pressed="true"]{background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line-2)}
+.bar-name{display:flex;align-items:center;gap:8px;font-size:13.5px;min-width:0}
+.bar-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{height:14px;display:block;position:relative}
+.bar-fill{position:absolute;inset:0 auto 0 0;border-radius:0 4px 4px 0;width:0;transition:width .95s var(--ease);transition-delay:var(--d,0ms)}
+.bar-row:hover .bar-fill{filter:brightness(1.15)}
+.bar-val{font:600 13px var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.bar-delta{font:500 12px var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);text-align:right;min-width:52px}
+@media (max-width:520px){.bars{grid-template-columns:minmax(84px,112px) minmax(0,1fr) auto}.bar-delta{display:none}.bars-top .hide-s{display:none}}
+
+/* inspector */
+.insp-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.insp-title h3{font-size:22px;font-weight:650}
+.tag{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg-2);border:1px solid var(--line-2);padding:4px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+.insp-how{color:var(--fg-2);font-size:14px;margin-top:8px}
+.insp-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 18px;margin-block:20px 14px}
+.insp-nums .big{grid-column:1/-1}
+.big .v{font:600 clamp(40px,5vw,54px)/.95 var(--body);letter-spacing:-.04em}
+.big small{font:500 12px var(--mono);color:var(--muted);margin-left:6px}
+.kv{display:grid;gap:4px;min-width:0}
+.kv .v{font:600 15px var(--mono);font-variant-numeric:tabular-nums}
+canvas.hist{display:block;width:100%;height:170px;margin-top:6px;touch-action:pan-y}
+.preview{font:400 12px/1.7 var(--mono);color:var(--fg-2);background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:118px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:8px}
+.reads{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--fg-2)}
+.reads b{color:var(--fg);font-weight:600}
+
+/* table */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+th{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+td{font-variant-numeric:tabular-nums}
+td.num{font-family:var(--mono)}
+tbody tr{transition:background .2s}
+tbody tr:hover{background:var(--panel-2)}
+
+/* experiments */
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:stretch}
+@media (max-width:940px){.two{grid-template-columns:minmax(0,1fr)}}
+.split{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(20px,3vw,40px);align-items:center}
+@media (max-width:940px){.split{grid-template-columns:minmax(0,1fr)}}
+.readouts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-block:16px}
+.readouts .v{font:600 clamp(20px,2.4vw,28px)/1 var(--body);letter-spacing:-.03em}
+.readouts .v small{font:500 11px var(--mono);color:var(--muted);margin-left:3px;letter-spacing:0}
+.slider{display:grid;gap:6px;margin-top:14px}
+.slider .top{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--fg-2)}
+.slider output{font:600 13px var(--mono);color:var(--fg)}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+#sizeChart{width:100%;min-width:0;position:relative}
+#sizeChart svg{display:block;width:100%;height:auto;overflow:visible}
+.svg-t{font:500 10.5px var(--mono);fill:var(--muted)}
+.svg-l{font:500 12px var(--body);fill:var(--fg-2)}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:dash 1.5s var(--ease) forwards}
+@keyframes dash{to{stroke-dashoffset:0}}
+.biglist{display:grid;gap:14px;margin-top:18px}
+.biglist div{display:grid;gap:3px}
+.biglist .v{font:600 22px/1.1 var(--body);letter-spacing:-.02em}
+.biglist .v small{font:500 12px var(--mono);color:var(--muted);margin-left:6px}
+details{margin-top:14px;font-size:13px;color:var(--fg-2)}
+summary{cursor:pointer;color:var(--fg-2);width:max-content;max-width:100%}
+
+/* limits */
+.limits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:860px){.limits{grid-template-columns:minmax(0,1fr)}}
+.limit{display:grid;gap:12px;align-content:start;transition:transform .35s var(--ease),border-color .35s}
+.limit:hover{transform:translateY(-3px);border-color:var(--line-2)}
+.limit h3{font-size:21px;font-weight:650;line-height:1.15}
+.limit p{color:var(--fg-2);font-size:14.5px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pair div{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:4px;min-width:0}
+.pair .v{font:600 22px/1 var(--body);letter-spacing:-.02em}
+.pair .v small{font:500 11px var(--mono);color:var(--muted);margin-left:4px}
+.pair .s{font:400 11px/1.5 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+
+footer{border-top:1px solid var(--line);margin-top:30px;padding-block:28px 40px;color:var(--muted);font-size:13px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:space-between}
+
+.tip{position:fixed;z-index:80;pointer-events:none;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:8px 10px;font-size:12.5px;box-shadow:0 14px 40px -14px rgba(0,0,0,.6);max-width:260px;display:grid;gap:4px}
+.tip .h{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tip .r{display:flex;align-items:center;gap:8px}
+.tip .r b{font:600 12.5px var(--mono);color:var(--fg)}
+.tip .r span{color:var(--fg-2)}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13.5px;font-weight:550;opacity:0;transition:all .35s var(--ease);pointer-events:none;z-index:90}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Entropy Lab</a>
+    <span class="nav-tag">P6 · Encrypted data analysis</span>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#menu">Menu</a><a href="#lab">Analyse</a><a href="#size">Sample size</a><a href="#shape">Distribution</a><a href="#limits">Limits</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="top">
+
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow up">Entropy-based analysis of encrypted data</p>
+        <h1 class="up d1">Read the data.<br>Leave the key <em>alone.</em></h1>
+        <p class="lede up d2">Paste text or drop a PDF. Entropy Lab runs it through eight hand-written ciphers and transforms, counts every byte, and measures how random each result looks. Nothing gets decrypted.</p>
+        <div class="hero-cta up d3">
+          <a class="btn primary" href="#lab">Open the lab
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+          <a class="btn" href="#limits">What entropy cannot tell you</a>
+        </div>
+        <div class="hero-facts up d4">
+          <span><b>8</b> methods</span><span><b>256</b> byte values counted</span><span><b>0</b> crypto libraries</span>
+        </div>
+      </div>
+
+      <div class="panel scope up d5" aria-label="Live demonstration: your text being encrypted with RC4 while its entropy is measured">
+        <div class="scope-head">
+          <span class="label live">Live · RC4 over your text</span>
+          <span class="formula">H = −Σ p(x) · log₂ p(x)</span>
+        </div>
+        <canvas id="heroCanvas" aria-hidden="true"></canvas>
+        <div class="scope-foot">
+          <div>
+            <div class="label" style="margin-bottom:8px">Entropy of this window</div>
+            <div class="scope-h"><span id="heroH">0.00</span><small>bits / byte</small></div>
+          </div>
+          <div class="scope-meter">
+            <div class="meter"><i id="heroMeter"></i><b style="left:58.75%"></b></div>
+            <div class="ticks"><span>0</span><span>4.70 letters</span><span>8 max</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============ MENU ============ -->
+  <nav class="menu" id="menu" aria-label="Main menu">
+    <div class="label">Menu</div>
+    <ol>
+      <li><a href="#dropTarget"><b>1</b><span>Load data<small>Type text, open a file or pick a sample</small></span></a></li>
+      <li><a href="#inspector"><b>2</b><span>Byte frequencies<small>Counts and histogram for any output</small></span></a></li>
+      <li><a href="#bars"><b>3</b><span>Compare entropy<small>Same input through every method</small></span></a></li>
+      <li><a href="#size"><b>4</b><span>Sample size<small>16 to 65,536 bytes</small></span></a></li>
+      <li><a href="#shape"><b>5</b><span>Modify the distribution<small>Mix in noise or build your own</small></span></a></li>
+      <li><a href="#limits"><b>6</b><span>Limitations<small>Where entropy misleads</small></span></a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ LAB ============ -->
+  <section id="lab">
+    <div class="sec-head reveal">
+      <p class="eyebrow">The lab</p>
+      <h2>One input. Eight outputs. One measurement.</h2>
+      <p>Every method gets the same bytes and is scored by the same function, in bits per byte. The scale runs from 0, where one symbol repeats, to 8, where all 256 byte values are equally likely.</p>
+    </div>
+
+    <div class="lab">
+      <!-- controls -->
+      <div class="stack reveal">
+        <div class="panel pad stack" id="dropTarget" style="gap:16px">
+          <div class="field">
+            <label for="text">Input</label>
+            <textarea class="input" id="text" spellcheck="false" aria-describedby="srcStatus"></textarea>
+            <div class="filechip" id="fileChip" hidden><span id="fileName"></span><button type="button" id="fileClear" aria-label="Remove file">✕</button></div>
+          </div>
+          <label class="drop" id="drop" for="file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+            <span>Drop a PDF or any file here, or <u>browse</u></span>
+          </label>
+          <input type="file" id="file" hidden>
+          <div class="status" id="srcStatus" role="status" aria-live="polite"></div>
+          <div class="field">
+            <span class="label">Try a sample</span>
+            <div class="chips" id="samples"></div>
+          </div>
+          <div class="field">
+            <span class="label">Count symbols from</span>
+            <div class="seg" id="preSeg" role="group" aria-label="Preprocessing">
+              <button type="button" id="preRaw" data-pre="raw" aria-pressed="true">Every byte</button>
+              <button type="button" id="preAz" data-pre="az" aria-pressed="false">Letters only, A–Z</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel pad stack" style="gap:16px">
+          <div class="keys">
+            <div class="field"><label for="shift">Shift</label><input class="input mono" id="shift" type="number" min="1" max="25" value="3"></div>
+            <div class="field"><label for="vkey">Vigenère key</label><input class="input mono" id="vkey" type="text" value="SECURE" autocomplete="off" spellcheck="false"></div>
+          </div>
+          <div class="field">
+            <label for="pass">Passphrase for XOR, one-time pad, RC4</label>
+            <input class="input mono" id="pass" type="text" value="entropy-lab-demo" autocomplete="off" spellcheck="false">
+            <p class="hint">Keys are derived from the passphrase so results repeat. Real systems use random keys.</p>
+          </div>
+          <div class="field">
+            <span class="label">Methods</span>
+            <div id="methodChips" class="stack" style="gap:12px"></div>
+          </div>
+          <button class="btn primary" id="run" type="button" style="justify-self:start">Run analysis
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg></button>
+        </div>
+      </div>
+
+      <!-- readouts -->
+      <div class="stack">
+        <div class="stats reveal">
+          <div class="panel stat"><span class="label">Input size</span><span class="v"><span id="stSize">0</span><small>bytes</small></span><span class="sub" id="stSrc">Typed text</span></div>
+          <div class="panel stat"><span class="label">Distinct byte values</span><span class="v"><span id="stUniq">0</span><small>of 256</small></span><span class="sub" id="stUniqSub"></span></div>
+          <div class="panel stat"><span class="label">Plaintext entropy</span><span class="v"><span id="stH">0.000</span><small>bits</small></span><span class="sub" id="stHSub"></span></div>
+          <div class="panel stat"><span class="label">Highest reading</span><span class="v"><span id="stTop">0.000</span><small>bits</small></span><span class="sub" id="stTopSub"></span></div>
+        </div>
+
+        <div class="panel pad reveal">
+          <div class="panel-head">
+            <h3>Entropy by method</h3>
+            <div class="seg" role="group" aria-label="View">
+              <button type="button" id="viewChart" aria-pressed="true">Chart</button>
+              <button type="button" id="viewTable" aria-pressed="false">Table</button>
+            </div>
+          </div>
+          <p class="insight" id="insight"></p>
+          <div id="chartView">
+            <div class="legend">
+              <span><i class="dot fam-plain"></i>Plaintext</span>
+              <span><i class="dot fam-classical"></i>Classical cipher</span>
+              <span><i class="dot fam-stream"></i>Stream cipher</span>
+              <span><i class="dot fam-transform"></i>Transform or reference</span>
+            </div>
+            <div class="bars" id="bars"></div>
+            <p class="hint" style="margin-top:10px">Bits per byte. The last column is the change from plaintext, ΔH. Select a row to inspect it below.</p>
+          </div>
+          <div id="tableView" hidden>
+            <div class="tablewrap"><table id="table"></table></div>
+            <div class="row" style="margin-top:12px"><button class="btn small" id="copyCsv" type="button">Copy as CSV</button></div>
+          </div>
+        </div>
+
+        <div class="panel pad reveal insp" id="inspector">
+          <div>
+            <div class="label" style="margin-bottom:10px">Selected output</div>
+            <div class="insp-title"><h3 id="inName">Plaintext</h3><span class="tag" id="inTag"><i class="dot"></i><span></span></span></div>
+            <p class="insp-how" id="inHow"></p>
+            <div class="insp-nums">
+              <div class="big"><span class="label">Entropy</span><div class="v"><span id="inH">0.000</span><small>bits / byte</small></div></div>
+              <div class="kv"><span class="label">ΔH</span><span class="v" id="inD">0.000</span></div>
+              <div class="kv"><span class="label">Output</span><span class="v" id="inN">0</span></div>
+              <div class="kv"><span class="label">Distinct</span><span class="v" id="inU">0</span></div>
+            </div>
+            <div class="meter" aria-hidden="true"><i id="inMeter"></i><b style="left:58.75%"></b></div>
+            <p class="reads" id="inReads"></p>
+          </div>
+          <div style="min-width:0">
+            <div class="row" style="justify-content:space-between">
+              <span class="label">Byte frequencies, 0x00 to 0xFF</span>
+              <span class="legend" style="margin:0"><span><i class="dot" id="inKey"></i>This output</span><span id="ghostKey"><i class="dot" style="opacity:.4"></i>Plaintext</span><span><i class="key-line" style="background:var(--muted)"></i>Uniform</span></span>
+            </div>
+            <canvas class="hist" id="inHist" tabindex="0" aria-label="Histogram of byte values for the selected output"></canvas>
+            <div class="label" style="margin-top:16px">First bytes of the output</div>
+            <div class="preview" id="inPrev" tabindex="0"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SAMPLE SIZE ============ -->
+  <section id="size">
+    <div class="sec-head reveal">
+      <p class="eyebrow">Experiment · sample size</p>
+      <h2>Small samples under-report entropy.</h2>
+      <p>A sample of N bytes can hold at most N different values, so its entropy can never pass log₂ N. Perfectly random data only reaches 8 bits once there are far more than 256 bytes to count.</p>
+    </div>
+    <div class="panel pad reveal">
+      <div class="split">
+        <div>
+          <div class="label">At <span id="szN">256</span> bytes</div>
+          <div class="biglist" id="szList"></div>
+          <p class="hint" style="margin-top:18px" id="szNote"></p>
+        </div>
+        <div style="min-width:0">
+          <div class="legend">
+            <span><i class="key-line" style="background:var(--s-plain)"></i>Your text</span>
+            <span><i class="key-line" style="background:var(--s-stream)"></i>RC4 of your text</span>
+            <span><i class="key-line" style="background:var(--s-transform)"></i>Random bytes</span>
+            <span><i class="key-line" style="background:var(--muted);height:1px"></i>Ceiling, log₂ N</span>
+          </div>
+          <div id="sizeChart" tabindex="0" aria-label="Line chart: measured entropy against sample size"></div>
+          <details><summary>Show the numbers</summary><div class="tablewrap"><table id="sizeTable"></table></div></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DISTRIBUTION ============ -->
+  <section id="shape">
+    <div class="sec-head reveal">
+      <p class="eyebrow">Experiment · distribution</p>
+      <h2>Change the distribution and the number moves.</h2>
+      <p>Entropy depends on two things only: how many symbols appear, and how evenly they are spread. Move the controls and watch both.</p>
+    </div>
+    <div class="two">
+      <div class="panel pad reveal">
+        <div class="panel-head"><h3>Build a distribution</h3>
+          <div class="chips" id="shapePresets">
+            <button type="button" class="chip" data-k="256" data-s="0">Uniform bytes</button>
+            <button type="button" class="chip" data-k="27" data-s="1">English-like</button>
+            <button type="button" class="chip" data-k="64" data-s="2.5">One symbol dominates</button>
+          </div>
+        </div>
+        <div class="readouts">
+          <div class="kv"><span class="label">Entropy</span><span class="v"><span id="shH">0.000</span><small>bits</small></span></div>
+          <div class="kv"><span class="label">Ceiling, log₂ k</span><span class="v"><span id="shMax">0.000</span><small>bits</small></span></div>
+          <div class="kv"><span class="label">Share of ceiling</span><span class="v"><span id="shEff">0</span><small>%</small></span></div>
+        </div>
+        <canvas class="hist" id="shapeHist" tabindex="0" aria-label="Bar chart of symbol probabilities"></canvas>
+        <div class="slider"><div class="top"><label for="shK">Symbols in use, k</label><output id="shKo" for="shK">27</output></div><input type="range" id="shK" min="1" max="256" value="27"></div>
+        <div class="slider"><div class="top"><label for="shS">Skew, from even to peaked</label><output id="shSo" for="shS">1.00</output></div><input type="range" id="shS" min="0" max="3" step="0.05" value="1"></div>
+        <p class="hint" style="margin-top:14px">Symbol i has probability proportional to 1 / i<sup>skew</sup>. Skew 0 is uniform.</p>
+      </div>
+
+      <div class="panel pad reveal">
+        <div class="panel-head"><h3>Mix noise into your text</h3></div>
+        <div class="readouts">
+          <div class="kv"><span class="label">Entropy</span><span class="v"><span id="nzH">0.000</span><small>bits</small></span></div>
+          <div class="kv"><span class="label">Change</span><span class="v"><span id="nzD">+0.000</span><small>bits</small></span></div>
+          <div class="kv"><span class="label">Distinct values</span><span class="v"><span id="nzU">0</span><small>/ 256</small></span></div>
+        </div>
+        <canvas class="hist" id="noiseHist" tabindex="0" aria-label="Histogram of byte values as random bytes replace your text"></canvas>
+        <div class="slider"><div class="top"><label for="nzP">Bytes replaced with random values</label><output id="nzPo" for="nzP">0%</output></div><input type="range" id="nzP" min="0" max="100" value="0"></div>
+        <p class="hint" style="margin-top:14px" id="nzNote">Each step swaps more of your bytes for random ones. The spikes of ordinary text sink into a flat floor.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LIMITS ============ -->
+  <section id="limits">
+    <div class="sec-head reveal">
+      <p class="eyebrow">Limitations</p>
+      <h2>A high number is not a verdict.</h2>
+      <p>Entropy describes the distribution of symbols. It says nothing about keys, algorithms or order. These four cases are measured on your current input.</p>
+    </div>
+    <div class="limits" id="limitGrid"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>All calculations run in Python on this computer. Nothing is sent anywhere else.</span>
+    <span class="mono">H = −Σ p(x) · log₂ p(x), measured over byte values</span>
+  </div>
+</footer>
+
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/* Entropy Lab front end.
+   This file only draws. Every measurement comes from the Python server
+   (app.py + entropy_core.py) through the /api/... endpoints. */
+(() => {
+'use strict';
+
+/* ---------------- helpers ---------------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LOG2_26 = Math.log2(26);
+const f3 = v => v.toFixed(3);
+const signed = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3);
+const int = v => Math.round(v).toLocaleString('en-US');
+const sizeLabel = n => n >= 1024 ? (n / 1024) + 'K' : String(n);
+const hexToBytes = h => Uint8Array.from(h.match(/../g) || [], x => parseInt(x, 16));
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+async function api(path, options) {
+  const res = await fetch(path, options); let data = null;
+  try { data = await res.json(); } catch { /* not JSON */ }
+  if (!res.ok) throw new Error((data && data.error) || 'The Python server returned an error.');
+  return data;
+}
+
+const FAMILY = { plain: 'Baseline', classical: 'Classical cipher', stream: 'Stream cipher', transform: 'Transform or reference' };
+const GROUPS = [['classical', 'Classical ciphers'], ['stream', 'Stream ciphers'], ['transform', 'Transforms and references']];
+const SAMPLES = [
+  { id: 'demo', name: 'Demo paragraph', text: 'Cybersecurity protects systems networks and data from digital attacks. Encryption converts readable information into an unreadable form so that only authorised users with the correct key can access the original message. Entropy measures how unpredictable the symbols in a message are.' },
+  { id: 'long', name: 'Longer passage', text: 'Claude Shannon published A Mathematical Theory of Communication in 1948 and gave engineers a way to measure information. His idea was that a message carries information only to the extent that it is unpredictable. A coin that always lands heads tells you nothing when it lands. A fair coin tells you one bit. A page of English sits somewhere in between, because the letter e appears far more often than the letter z, and a q is almost always followed by a u. That unevenness is what makes ordinary text compressible, and it is also what classical codebreakers exploited for centuries. Count the symbols in a simple substitution cipher and the most common one is probably standing in for e. A well designed modern cipher removes that foothold. Its output is spread so evenly across all 256 byte values that counting them reveals nothing about the message underneath. An analyst who cannot decrypt a file can still learn something from its statistics alone. Low entropy suggests structure, such as text, tables or repeated records. High entropy suggests the data has been compressed, encrypted or generated at random. The measurement cannot say which of those three happened, and it cannot say whether the encryption was done well. It is a first look at the data and nothing more than that.' },
+  { id: 'rep', name: 'Repetitive log', text: Array.from({ length: 24 }, (_, i) => `2026-10-02 09:${String(10 + i).padStart(2, '0')}:00 INFO login ok user=admin src=10.0.0.${1 + i % 3}`).join('\n') },
+  { id: 'one', name: 'One symbol', text: 'A'.repeat(400) },
+];
+
+const state = { mode: 'text', fileToken: null, pre: 'raw', methods: [], enabled: new Set(), selected: 'rc4', results: [], token: 0, rowKey: '', size: null, noise: null, truncated: false };
+
+/* ---------------- analysis: ask Python ---------------- */
+async function analyse(animate) {
+  const token = ++state.token;
+  const body = { text: state.mode === 'binary' ? null : $('#text').value, file_token: state.mode === 'binary' ? state.fileToken : null, pre: state.pre,
+    shift: $('#shift').value, vkey: $('#vkey').value, passphrase: $('#pass').value, enabled: [...state.enabled] };
+  let data;
+  try { data = await api('/api/analyse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+  catch (e) { if (token === state.token) status(e instanceof TypeError ? 'The Python server is not answering. Check that app.py is still running.' : e.message, true); return; }
+  if (token !== state.token) return;
+  if ($('#srcStatus').classList.contains('err')) status('');
+  for (const r of data.results) r.m = r;                       // renderers read r.m.name, r.m.fam ...
+  state.results = data.results; state.truncated = data.truncated;
+  state.size = data.size ? { ...data.size, idx: state.size ? state.size.idx : 4 } : null;
+  state.noise = data.noise;
+  if (!state.results.some(r => r.id === state.selected)) state.selected = state.results.some(r => r.id === 'rc4') ? 'rc4' : state.results[state.results.length - 1].id;
+  renderStats(); renderInsight(); renderBars(animate); renderTable(); renderInspector(animate);
+  renderSize(animate); renderNoise(); renderLimits(data.limits);
+  if (data.hero) { hero.plain = hexToBytes(data.hero.plain); hero.cipher = hexToBytes(data.hero.cipher); }
+}
+
+/* ---------------- numbers ---------------- */
+function tween(node, to, fmt = f3, dur = 800) {
+  const from = node._v ?? 0; node._v = to; cancelAnimationFrame(node._raf);
+  if (reduceMotion || from === to) { node.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    node.textContent = fmt(from + (to - from) * e); if (k < 1) node._raf = requestAnimationFrame(step); };
+  node._raf = requestAnimationFrame(step);
+}
+function scramble(node, finalText) {
+  cancelAnimationFrame(node._raf);
+  if (reduceMotion) { node.textContent = finalText; return; }
+  const chars = '0123456789abcdef', t0 = performance.now(), dur = 650, len = finalText.length;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur), cut = Math.floor(len * k); let s = finalText.slice(0, cut);
+    for (let i = cut; i < len; i++) { const ch = finalText[i]; s += ch === ' ' || ch === '\n' ? ch : chars[Math.random() * 16 | 0]; }
+    node.textContent = s; if (k < 1) node._raf = requestAnimationFrame(step);
+  };
+  node._raf = requestAnimationFrame(step);
+}
+function renderStats() {
+  const p = state.results[0];
+  tween($('#stSize'), p.n, int); tween($('#stUniq'), p.unique, int); tween($('#stH'), p.H);
+  $('#stSrc').textContent = (state.mode === 'binary' ? 'Raw file bytes' : state.fileLabel ? 'Text from file' : 'Typed text') + (state.pre === 'az' ? ', letters only' : '') + (state.truncated ? ', first 200,000 bytes' : '');
+  $('#stUniqSub').textContent = p.n ? `Ceiling for these symbols: ${f3(Math.log2(Math.max(1, p.unique)))} bits` : 'No input yet';
+  $('#stHSub').textContent = p.n ? `${Math.round(p.H / 8 * 100)}% of the 8-bit maximum` : '';
+  const top = state.results.slice(1).reduce((a, r) => !a || r.H > a.H ? r : a, null);
+  tween($('#stTop'), top ? top.H : 0); $('#stTopSub').textContent = top ? top.name : 'Run a method to compare';
+}
+function renderInsight() {
+  const node = $('#insight'), rs = state.results, p = rs[0]; node.textContent = '';
+  if (!p.n) { node.textContent = 'Add some text or a file to see results.'; return; }
+  const zero = rs.slice(1).filter(r => Math.abs(r.dH) < 1e-9 && r.fam === 'classical').map(r => r.name);
+  const top = rs.filter(r => r.fam === 'stream').reduce((a, r) => !a || r.H > a.H ? r : a, null);
+  const add = (t, bold) => node.append(bold ? el('b', '', t) : document.createTextNode(t));
+  if (zero.length) { add(zero.join(' and '), true); add(zero.length > 1 ? ' leave entropy exactly where it started. ' : ' leaves entropy exactly where it started. '); }
+  if (top) { add(top.name, true); add(` moves it from ${f3(p.H)} to `); add(f3(top.H), true); add(` bits per byte, ${Math.round(top.H / 8 * 100)}% of the 8-bit ceiling. `); }
+  if (p.n < 2048 && top) add(`With only ${int(top.n)} bytes to count, no data could score a full 8.`);
+}
+
+/* ---------------- bar chart and table ---------------- */
+function renderBars(animate) {
+  const host = $('#bars'), rs = state.results, key = rs.map(r => r.id).join(',');
+  if (key !== state.rowKey) {
+    state.rowKey = key; host.textContent = ''; let row = 1;
+    const top = el('div', 'bars-top'); top.style.gridRow = row++; top.setAttribute('aria-hidden', 'true');
+    const t1 = el('span'); t1.style.left = '58.75%'; t1.append(el('span', 'hide-s', '26-letter ceiling '), document.createTextNode('4.70')); top.append(t1); host.append(top);
+    const first = row;
+    const addRow = r => {
+      const b = el('button', 'bar-row'); b.type = 'button'; b.dataset.id = r.id; b.style.gridRow = row++;
+      const name = el('span', 'bar-name'); name.append(el('i', 'dot fam-' + r.fam), el('span', '', r.name));
+      const track = el('span', 'bar-track'); track.append(el('span', 'bar-fill fam-' + r.fam));
+      b.append(name, track, el('span', 'bar-val'), el('span', 'bar-delta')); host.append(b);
+    };
+    addRow(rs[0]);
+    for (const [fam, title] of GROUPS) {
+      const members = rs.filter(r => r.fam === fam); if (!members.length) continue;
+      const g = el('div', 'bars-group', title); g.style.gridRow = row++; host.append(g); members.forEach(addRow);
+    }
+    const grid = el('div', 'bars-grid'); grid.style.gridRow = `${first} / ${row}`; grid.setAttribute('aria-hidden', 'true');
+    for (const v of [0, 2, 4, 6, 8]) { const i = el('i'); i.style.left = `calc(${v / 8 * 100}% - ${v === 8 ? 1 : 0}px)`; grid.append(i); }
+    const ref = el('i', 'ref'); ref.style.left = (LOG2_26 / 8 * 100) + '%'; grid.append(ref); host.append(grid);
+    const axis = el('div', 'bars-axis'); axis.style.gridRow = row++; axis.setAttribute('aria-hidden', 'true');
+    for (const v of [0, 2, 4, 6, 8]) { const s = el('span', '', String(v)); s.style.left = (v / 8 * 100) + '%'; axis.append(s); }
+    host.append(axis);
+    animate = true;
+  }
+  const rows = $$('.bar-row', host);
+  rows.forEach((b, i) => {
+    const r = rs.find(x => x.id === b.dataset.id), fill = $('.bar-fill', b);
+    b.setAttribute('aria-pressed', String(r.id === state.selected));
+    b.setAttribute('aria-label', `${r.name}: ${f3(r.H)} bits per byte`);
+    fill.style.setProperty('--d', animate ? i * 45 + 'ms' : '0ms');
+    if (animate && !reduceMotion) { fill.style.transition = 'none'; fill.style.width = '0%'; void fill.offsetWidth; fill.style.transition = ''; }
+    fill.style.width = (r.H / 8 * 100) + '%';
+    tween($('.bar-val', b), r.H);
+    $('.bar-delta', b).textContent = r.id === 'plain' ? 'baseline' : signed(r.dH);
+  });
+}
+function renderTable() {
+  const t = $('#table'); t.textContent = '';
+  const head = el('tr'); ['Method', 'Type', 'Bytes out', 'Distinct', 'H, bits/byte', 'ΔH', '% of 8 bits', 'Reading'].forEach(h => head.append(el('th', '', h)));
+  const thead = el('thead'); thead.append(head); const tb = el('tbody');
+  for (const r of state.results) {
+    const tr = el('tr');
+    tr.append(el('td', '', r.name), el('td', '', FAMILY[r.fam]), el('td', 'num', int(r.n)), el('td', 'num', String(r.unique)),
+      el('td', 'num', f3(r.H)), el('td', 'num', r.id === 'plain' ? '0.000' : signed(r.dH)), el('td', 'num', (r.H / 8 * 100).toFixed(1)), el('td', '', r.band));
+    tb.append(tr);
+  }
+  t.append(thead, tb);
+}
+function csv() {
+  return ['method,type,bytes_out,distinct_values,entropy_bits_per_byte,delta_h,percent_of_8_bits,reading',
+    ...state.results.map(r => [`"${r.name}"`, `"${FAMILY[r.fam]}"`, r.n, r.unique, r.H.toFixed(4), r.dH.toFixed(4), (r.H / 8 * 100).toFixed(2), `"${r.band}"`].join(','))].join('\n');
+}
+/* ---------------- histogram canvas ---------------- */
+let COLORS = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'bg-2', 'panel', 'panel-2', 'line', 'line-2', 'fg', 'fg-2', 'muted', 'accent', 's-plain', 's-classical', 's-stream', 's-transform'])
+    COLORS[k] = cs.getPropertyValue('--' + k).trim();
+}
+class Hist {
+  constructor(canvas, opts = {}) {
+    Object.assign(this, { cv: canvas, ctx: canvas.getContext('2d'), cur: new Float64Array(256), from: new Float64Array(256), to: new Float64Array(256),
+      ghost: null, color: 's-classical', bins: 256, uniform: true, hover: -1, describe: null, ...opts });
+    new ResizeObserver(() => this.draw()).observe(canvas);
+    const move = e => { const r = canvas.getBoundingClientRect(); this.hover = Math.max(0, Math.min(this.bins - 1, Math.floor((e.clientX - r.left) / r.width * this.bins))); this.draw(); this.tip(e.clientX, e.clientY); };
+    canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerdown', move);
+    canvas.addEventListener('pointerleave', () => { this.hover = -1; this.draw(); hideTip(); });
+    canvas.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; e.preventDefault();
+      this.hover = Math.max(0, Math.min(this.bins - 1, (this.hover < 0 ? 0 : this.hover) + (e.key === 'ArrowRight' ? 1 : -1))); this.draw();
+      const r = canvas.getBoundingClientRect(); this.tip(r.left + (this.hover + .5) / this.bins * r.width, r.top + 20);
+    });
+    canvas.addEventListener('blur', () => { this.hover = -1; this.draw(); hideTip(); });
+  }
+  tip(x, y) { if (this.describe) showTip(x, y, ...this.describe(this.hover)); }
+  set(shares, { ghost = null, color, bins } = {}) {
+    this.from = this.cur.slice(); this.to = shares; this.ghost = ghost; if (color) this.color = color; if (bins) this.bins = bins;
+    cancelAnimationFrame(this.raf);
+    if (reduceMotion) { this.cur = Float64Array.from(shares); this.draw(); return; }
+    const t0 = performance.now(), dur = 520;
+    const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      for (let i = 0; i < 256; i++) this.cur[i] = this.from[i] + (this.to[i] - this.from[i]) * e;
+      this.draw(); if (k < 1) this.raf = requestAnimationFrame(step); };
+    this.raf = requestAnimationFrame(step);
+  }
+  draw() {
+    const { cv, ctx, bins } = this, dpr = Math.min(2, devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight; if (!w) return;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    const padB = 18, padT = 16, ph = h - padB - padT, bw = w / bins;
+    let max = 1e-9; for (let i = 0; i < bins; i++) { if (this.cur[i] > max) max = this.cur[i]; if (this.ghost && this.ghost[i] > max) max = this.ghost[i]; }
+    max *= 1.06; const y = v => padT + ph * (1 - v / max);
+    const gap = bw >= 5 ? 2 : 0, rad = bw - gap >= 6 ? 3 : 0;
+    const bar = (i, v) => { if (v <= 0) return; const x = i * bw + gap / 2, bh = Math.max(1, ph * v / max);
+      if (rad && bh > rad) { ctx.beginPath(); ctx.roundRect(x, padT + ph - bh, bw - gap, bh, [rad, rad, 0, 0]); ctx.fill(); } else ctx.fillRect(x, padT + ph - bh, Math.max(.75, bw - gap), bh); };
+    if (this.ghost) { ctx.fillStyle = COLORS['s-plain']; ctx.globalAlpha = .34; for (let i = 0; i < bins; i++) bar(i, this.ghost[i]); ctx.globalAlpha = 1; }
+    ctx.fillStyle = COLORS[this.color]; for (let i = 0; i < bins; i++) if (i !== this.hover) bar(i, this.cur[i]);
+    if (this.hover >= 0) { ctx.fillStyle = COLORS.fg; bar(this.hover, Math.max(this.cur[this.hover], max * .02)); }
+    ctx.fillStyle = COLORS['line-2']; ctx.fillRect(0, padT + ph, w, 1);
+    ctx.font = '500 10px ui-monospace, Menlo, Consolas, monospace'; ctx.textBaseline = 'alphabetic';
+    if (this.uniform) { const u = 1 / bins, uy = Math.round(y(u)) + .5; if (u < max) { ctx.fillStyle = COLORS.muted; ctx.globalAlpha = .9; ctx.fillRect(0, uy, w, 1); ctx.globalAlpha = 1; } }
+    ctx.fillStyle = COLORS.muted;
+    if (bins === 256) { ['00', '40', '80', 'C0', 'FF'].forEach((t, i) => { ctx.textAlign = i === 0 ? 'left' : i === 4 ? 'right' : 'center'; ctx.fillText(t, i === 4 ? w : i * 64 * bw, h - 4); }); }
+    else { ctx.textAlign = 'left'; ctx.fillText('1', 0, h - 4); ctx.textAlign = 'right'; ctx.fillText(String(bins), w, h - 4); }
+    ctx.textAlign = 'right'; ctx.fillText('peak ' + (max / 1.06 * 100).toFixed(max < .0106 ? 2 : 1) + '%', w, 10);
+  }
+}
+const shares = (counts, n) => { const s = new Float64Array(256); if (n) for (let i = 0; i < 256; i++) s[i] = counts[i] / n; return s; };
+const byteName = i => '0x' + i.toString(16).toUpperCase().padStart(2, '0') + (i >= 33 && i < 127 ? `  “${String.fromCharCode(i)}”` : i === 32 ? '  space' : i === 10 ? '  newline' : '');
+/* ---------------- inspector ---------------- */
+let inHist, shapeHist, noiseHist;
+function renderInspector(animate) {
+  const r = state.results.find(x => x.id === state.selected) || state.results[0], p = state.results[0];
+  $('#inName').textContent = r.name;
+  const tag = $('#inTag'); tag.firstElementChild.className = 'dot fam-' + r.fam; tag.lastElementChild.textContent = FAMILY[r.fam];
+  $('#inKey').className = 'dot fam-' + r.fam; $('#ghostKey').hidden = r.id === 'plain';
+  $('#inHow').textContent = r.how;
+  tween($('#inH'), r.H); $('#inD').textContent = r.id === 'plain' ? '0.000' : signed(r.dH);
+  $('#inN').textContent = int(r.n) + ' B'; $('#inU').textContent = r.unique + ' / 256';
+  $('#inMeter').style.width = (r.H / 8 * 100) + '%';
+  inHist.describe = i => [byteName(i), [{ color: 's-' + r.fam, value: (r.n ? r.counts[i] / r.n * 100 : 0).toFixed(2) + '%', label: `${int(r.counts[i])} in this output` },
+    ...(r.id === 'plain' ? [] : [{ color: 's-plain', value: (p.n ? p.counts[i] / p.n * 100 : 0).toFixed(2) + '%', label: 'in the plaintext' }])]];
+  inHist.set(shares(r.counts, r.n), { ghost: r.id === 'plain' ? null : shares(p.counts, p.n), color: 's-' + r.fam });
+  const prev = r.preview || '(empty)';
+  if (animate && r.id !== 'plain') scramble($('#inPrev'), prev); else { cancelAnimationFrame($('#inPrev')._raf); $('#inPrev').textContent = prev; }
+  const reads = $('#inReads'); reads.textContent = ''; reads.append(el('b', '', 'What the reading shows. '), document.createTextNode(r.reads));
+}
+
+/* ---------------- tooltip and toast ---------------- */
+const tipEl = $('#tip');
+function showTip(x, y, header, rows) {
+  tipEl.textContent = ''; tipEl.append(el('div', 'h', header));
+  for (const r of rows) { const d = el('div', 'r'); const k = el('i', 'key-line'); k.style.background = `var(--${r.color})`; d.append(k, el('b', '', r.value), el('span', '', r.label)); tipEl.append(d); }
+  tipEl.hidden = false;
+  const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  tipEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, x + 14)) + 'px';
+  tipEl.style.top = Math.max(8, y - h - 12 < 8 ? y + 16 : y - h - 12) + 'px';
+}
+function hideTip() { tipEl.hidden = true; }
+let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1900); }
+/* ---------------- experiment: sample size ---------------- */
+function renderSize(animate) {
+  const host = $('#sizeChart'), S = state.size; host.textContent = '';
+  const SIZES = S ? S.sizes : [];
+  if (!S) { $('#szList').textContent = ''; $('#szNote').textContent = 'Add some input to run this experiment.'; return; }
+  const W = Math.max(280, host.clientWidth), Hh = Math.round(Math.max(230, Math.min(330, W * .52))), m = { l: 30, r: 14, t: 16, b: 26 };
+  const x = i => m.l + (W - m.l - m.r) * i / (SIZES.length - 1), y = v => m.t + (Hh - m.t - m.b) * (1 - v / 8);
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = (tag, attrs, text) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; return n; };
+  const svg = s('svg', { viewBox: `0 0 ${W} ${Hh}`, width: W, height: Hh, role: 'img' });
+  for (const v of [0, 2, 4, 6, 8]) { svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': 1 }), s('text', { x: m.l - 8, y: y(v) + 3.5, 'text-anchor': 'end', class: 'svg-t' }, v)); }
+  const stepX = W < 430 ? 4 : 2;
+  SIZES.forEach((n, i) => { if (i % stepX === 0) svg.append(s('text', { x: x(i), y: Hh - 6, 'text-anchor': i === 0 ? 'start' : i === SIZES.length - 1 ? 'end' : 'middle', class: 'svg-t' }, sizeLabel(n))); });
+  const path = arr => arr.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+  const line = (arr, color, width = 2) => { const p = s('path', { d: path(arr), fill: 'none', stroke: `var(--${color})`, 'stroke-width': width, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', pathLength: 1 }); if (animate && !reduceMotion) p.setAttribute('class', 'draw'); svg.append(p); };
+  line(S.ceil, 'muted', 1); line(S.plain, 's-plain'); line(S.rand, 's-transform'); line(S.cipher, 's-stream');
+  const last = SIZES.length - 1;
+  for (const [arr, c] of [[S.plain, 's-plain'], [S.rand, 's-transform'], [S.cipher, 's-stream']]) svg.append(s('circle', { cx: x(last), cy: y(arr[last]), r: 4, fill: `var(--${c})`, stroke: 'var(--panel)', 'stroke-width': 2 }));
+  if (W >= 480) svg.append(s('text', { x: W - m.r - 8, y: y(S.cipher[last]) + 20, 'text-anchor': 'end', class: 'svg-l' }, `RC4 and random overlap, ${S.cipher[last].toFixed(2)}`));
+  if (W >= 480) svg.append(s('text', { x: W - m.r - 8, y: y(S.plain[last]) + (S.plain[last] > 6.6 ? 38 : S.plain[last] < .8 ? -10 : 20), 'text-anchor': 'end', class: 'svg-l' }, `Your text, ${S.plain[last].toFixed(2)}`));
+  const cross = s('line', { y1: m.t, y2: Hh - m.b, stroke: 'var(--fg-2)', 'stroke-width': 1 }); svg.append(cross);
+  const dots = [[S.plain, 's-plain'], [S.rand, 's-transform'], [S.cipher, 's-stream']].map(([arr, c]) => { const d = s('circle', { r: 4.5, fill: `var(--${c})`, stroke: 'var(--panel)', 'stroke-width': 2 }); svg.append(d); return [d, arr]; });
+  const hit = s('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: Hh - m.t - m.b, fill: 'transparent' }); hit.style.touchAction = 'pan-y'; svg.append(hit);
+  const select = (i, cx, cy) => {
+    S.idx = Math.max(0, Math.min(last, i)); const X = x(S.idx);
+    cross.setAttribute('x1', X); cross.setAttribute('x2', X); dots.forEach(([d, arr]) => { d.setAttribute('cx', X); d.setAttribute('cy', y(arr[S.idx])); });
+    renderSizeList();
+    if (cx != null) showTip(cx, cy, `N = ${int(SIZES[S.idx])} bytes`, [
+      { color: 's-stream', value: S.cipher[S.idx].toFixed(3), label: 'RC4' }, { color: 's-transform', value: S.rand[S.idx].toFixed(3), label: 'Random bytes' },
+      { color: 's-plain', value: S.plain[S.idx].toFixed(3), label: 'Your text' }, { color: 'muted', value: S.ceil[S.idx].toFixed(3), label: 'Ceiling' }]);
+  };
+  const fromEvent = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; select(Math.round((px - m.l) / (W - m.l - m.r) * last), e.clientX, e.clientY); };
+  hit.addEventListener('pointermove', fromEvent); hit.addEventListener('pointerdown', fromEvent); hit.addEventListener('pointerleave', hideTip);
+  host.onkeydown = e => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; e.preventDefault(); const r = svg.getBoundingClientRect(); const i = S.idx + (e.key === 'ArrowRight' ? 1 : -1); select(i, r.left + x(Math.max(0, Math.min(last, i))) / W * r.width, r.top + 30); };
+  host.onblur = hideTip;
+  host.append(svg); select(S.idx);
+  const t = $('#sizeTable'); t.textContent = ''; const hr = el('tr'); ['N, bytes', 'Your text', 'RC4', 'Random', 'Ceiling'].forEach(h => hr.append(el('th', '', h)));
+  const th = el('thead'); th.append(hr); const tb = el('tbody');
+  SIZES.forEach((n, i) => { const tr = el('tr'); tr.append(el('td', 'num', int(n)), el('td', 'num', f3(S.plain[i])), el('td', 'num', f3(S.cipher[i])), el('td', 'num', f3(S.rand[i])), el('td', 'num', f3(S.ceil[i]))); tb.append(tr); });
+  t.append(th, tb);
+  $('#szNote').textContent = S.input_len < 65536 ? `Your input is ${int(S.input_len)} bytes, so it is repeated to fill 65,536 bytes before encrypting. Hover or use the arrow keys on the chart to pick a size.` : 'The first 65,536 bytes of your input are used. Hover or use the arrow keys on the chart to pick a size.';
+}
+function renderSizeList() {
+  const S = state.size, i = S.idx, host = $('#szList'); $('#szN').textContent = int(S.sizes[i]);
+  if (!host.children.length) for (const [k, label] of [['cipher', 'RC4'], ['rand', 'Random bytes'], ['plain', 'Your text'], ['ceil', 'Most any sample could score']]) {
+    const d = el('div'); d.dataset.k = k; d.append(el('span', 'label', label)); const v = el('span', 'v'); v.append(el('span', 'n', '0.000'), el('small', '', 'bits')); d.append(v); host.append(d); }
+  for (const d of host.children) tween($('.n', d), S[d.dataset.k][i], f3, 350);
+}
+/* ---------------- experiment: distribution ---------------- */
+let shapeToken = 0;
+async function renderShape() {
+  const k = +$('#shK').value, sk = +$('#shS').value, token = ++shapeToken;
+  $('#shKo').textContent = k; $('#shSo').textContent = sk.toFixed(2);
+  let d; try { d = await api(`/api/shape?k=${k}&s=${sk}`); } catch { return; }
+  if (token !== shapeToken) return;
+  const p = new Float64Array(256); p.set(d.p);
+  tween($('#shH'), d.H, f3, 300); tween($('#shMax'), d.Hmax, f3, 300); tween($('#shEff'), d.Hmax ? d.H / d.Hmax * 100 : 0, v => v.toFixed(0), 300);
+  shapeHist.describe = i => [`Symbol ${i + 1} of ${d.k}`, [{ color: 's-classical', value: (p[i] * 100).toFixed(2) + '%', label: 'probability' }]];
+  shapeHist.set(p, { bins: d.k });
+}
+function renderNoise() {
+  const Z = state.noise, pct = +$('#nzP').value; $('#nzPo').textContent = pct + '%';
+  if (!Z) { noiseHist.set(new Float64Array(256)); return; }
+  const c = Z.counts[pct], n = state.results[0].n;
+  tween($('#nzH'), Z.H[pct], f3, 300); tween($('#nzD'), Z.H[pct] - Z.base, signed, 300); tween($('#nzU'), Z.unique[pct], int, 300);
+  noiseHist.describe = i => [byteName(i), [{ color: 's-classical', value: (n ? c[i] / n * 100 : 0).toFixed(2) + '%', label: `${int(c[i])} bytes` }]];
+  noiseHist.set(shares(c, n));
+}
+
+/* ---------------- limitations ---------------- */
+function renderLimits(cards) {
+  const host = $('#limitGrid'); host.textContent = '';
+  for (const c of cards) {
+    const d = el('div', 'panel pad limit reveal'); d.append(el('h3', '', c.h), el('p', '', c.p));
+    const pair = el('div', 'pair');
+    for (const [label, val, sub] of [c.a, c.b]) { const box = el('div'); box.append(el('span', 'label', label)); const v = el('span', 'v'); v.append(document.createTextNode(f3(val)), el('small', '', 'bits')); box.append(v, el('span', 's', sub)); pair.append(box); }
+    d.append(pair); host.append(d);
+  }
+}
+
+/* ---------------- hero animation ----------------
+   Decorative. It shows bytes Python already produced; the small readout below it
+   is the only number worked out in the browser, because it changes every frame. */
+const hero = { plain: new TextEncoder().encode(SAMPLES[0].text), cipher: null };
+{ const r = mulberry32(7); hero.cipher = Uint8Array.from({ length: 512 }, () => r() * 256 | 0); }
+function windowEntropy(counts, n) { let h = 0; for (let i = 0; i < 256; i++) { const v = counts[i]; if (v) { const p = v / n; h -= p * Math.log2(p); } } return h; }
+function startHero() {
+  const cv = $('#heroCanvas'), ctx = cv.getContext('2d'), hOut = $('#heroH'), meter = $('#heroMeter');
+  const CW = 26, CH = 24, SWEEP = 5200, HOLD = 1700, RESET = 900, CYCLE = SWEEP + HOLD + RESET;
+  let cols = 0, rows = 0, w = 0, h = 0, visible = true, lastDraw = 0, lastRead = 0; const t0 = performance.now(), flick = mulberry32(99);
+  const resize = () => { const dpr = Math.min(2, devicePixelRatio || 1); w = cv.clientWidth; h = cv.clientHeight; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); cols = Math.max(4, Math.floor((w - 16) / CW)); rows = Math.max(2, Math.floor((h - 12) / CH)); };
+  new ResizeObserver(() => { resize(); if (reduceMotion) draw(t0 + SWEEP * .55, true); }).observe(cv);
+  new IntersectionObserver(e => { visible = e[0].isIntersecting; }).observe(cv);
+  function draw(now, force) {
+    if (!w) return;
+    const cipher = hero.cipher, plain = hero.plain, cells = cols * rows;
+    const el2 = now - t0, tt = el2 % CYCLE; let chunk = Math.floor(el2 / CYCLE), p, alpha = 1;
+    if (tt < SWEEP) { const k = tt / SWEEP; p = k * k * (3 - 2 * k) * 1.08; }
+    else if (tt < SWEEP + HOLD) p = 1.08;
+    else { const f = (tt - SWEEP - HOLD) / RESET; alpha = Math.abs(1 - 2 * f); if (f >= .5) { p = -.05; chunk++; } else p = 1.08; }
+    ctx.clearRect(0, 0, w, h);
+    const ox = (w - cols * CW) / 2, oy = (h - rows * CH) / 2, counts = new Uint32Array(256), span = cols + rows * .6;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const i = r * cols + c, th = (c + r * .6) / span, d = p - th, src = chunk * cells + i;
+      const cx = ox + c * CW + CW / 2, cy = oy + r * CH + CH / 2;
+      let byte, isCipher = d > 0;
+      if (isCipher) byte = cipher[src % cipher.length]; else byte = plain[src % plain.length];
+      const front = Math.abs(d) < .045;
+      if (front && !reduceMotion) byte = flick() * 256 | 0;
+      counts[byte]++;
+      if (front) { ctx.globalAlpha = alpha * .16; ctx.fillStyle = COLORS.accent; ctx.fillRect(cx - CW / 2 + 1, cy - CH / 2 + 1, CW - 2, CH - 2); }
+      if (isCipher || front) { ctx.font = '500 11px "Geist Mono", ui-monospace, Menlo, Consolas, monospace'; ctx.fillStyle = COLORS.accent; ctx.globalAlpha = alpha * (front ? 1 : .3 + .7 * byte / 255); ctx.fillText(byte.toString(16).padStart(2, '0'), cx, cy + 1); }
+      else { ctx.font = '500 13px "Geist Mono", ui-monospace, Menlo, Consolas, monospace'; ctx.fillStyle = COLORS['fg-2']; ctx.globalAlpha = alpha * .72; ctx.fillText(byte > 32 && byte < 127 ? String.fromCharCode(byte) : '·', cx, cy + 1); }
+    }
+    ctx.globalAlpha = 1;
+    if (force || now - lastRead > 110) { lastRead = now; const H = windowEntropy(counts, cells); hOut.textContent = H.toFixed(2); meter.style.width = (H / 8 * 100) + '%'; }
+  }
+  resize();
+  if (reduceMotion) { draw(t0 + SWEEP * .55, true); return () => draw(t0 + SWEEP * .55, true); }
+  const loop = now => { if (visible && !document.hidden && now - lastDraw > 33) { lastDraw = now; draw(now); } requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  return () => {};
+}
+
+/* ---------------- files: Python extracts the text ---------------- */
+const status = (msg, err) => { const s = $('#srcStatus'); s.textContent = msg || ''; s.classList.toggle('err', !!err); };
+function setFileChip(label) { state.fileLabel = label; $('#fileChip').hidden = !label; $('#fileName').textContent = label || ''; }
+async function handleFile(file) {
+  if (!file) return;
+  try {
+    if (file.size > 40 * 1024 * 1024) throw new Error('That file is over 40 MB. Try a smaller one.');
+    status('Reading ' + file.name + '…');
+    const form = new FormData(); form.append('file', file);
+    let d; try { d = await api('/api/extract', { method: 'POST', body: form }); }
+    catch (e) { throw e instanceof TypeError ? new Error('The Python server is not answering. Check that app.py is still running.') : e; }
+    if (d.kind === 'text') { state.mode = 'text'; state.fileToken = null; $('#text').value = d.text; $('#text').hidden = false; setFileChip(d.label); status('Text extracted. You can edit it above.'); }
+    else { state.mode = 'binary'; state.fileToken = d.token; $('#text').hidden = true; setFileChip(d.label); status('Not a text file, so its raw bytes are analysed. Letter ciphers only change the bytes that happen to be letters.'); }
+    markSample(null); analyse(true);
+  } catch (e) { status(e.message, true); }
+}
+function clearFile() { state.mode = 'text'; state.fileToken = null; $('#text').hidden = false; setFileChip(null); status(''); $('#file').value = ''; }
+
+/* ---------------- wiring ---------------- */
+function markSample(id) { $$('#samples .chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.id === id))); }
+function buildControls() {
+  const sm = $('#samples');
+  for (const s of SAMPLES) { const b = el('button', 'chip', s.name); b.type = 'button'; b.dataset.id = s.id; b.setAttribute('aria-pressed', 'false');
+    b.onclick = () => { clearFile(); $('#text').value = s.text; markSample(s.id); analyse(true); }; sm.append(b); }
+  const mc = $('#methodChips');
+  for (const [fam, title] of GROUPS) {
+    const g = el('div'), t = el('div', 'group-title'); t.append(el('i', 'dot fam-' + fam), document.createTextNode(title)); const chips = el('div', 'chips');
+    for (const m of state.methods.filter(x => x.fam === fam)) {
+      const b = el('button', 'chip', m.name); b.type = 'button'; b.id = 'm-' + m.id; b.setAttribute('aria-pressed', 'true');
+      b.onclick = () => { const on = !state.enabled.has(m.id); on ? state.enabled.add(m.id) : state.enabled.delete(m.id); b.setAttribute('aria-pressed', String(on)); if (on) state.selected = m.id; analyse(false); };
+      chips.append(b);
+    }
+    g.append(t, chips); mc.append(g);
+  }
+}
+function wire() {
+  let deb; const live = () => { clearTimeout(deb); deb = setTimeout(() => analyse(false), 220); };
+  $('#text').addEventListener('input', () => { markSample(null); if (state.fileLabel) setFileChip(state.fileLabel.replace(/ · edited$/, '') + ' · edited'); live(); });
+  for (const id of ['#shift', '#vkey', '#pass']) $(id).addEventListener('input', live);
+  $('#run').onclick = () => { analyse(true); if (matchMedia('(max-width:1020px)').matches) $('#bars').scrollIntoView({ block: 'center' }); };
+  $$('#preSeg button').forEach(b => b.onclick = () => { state.pre = b.dataset.pre; $$('#preSeg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); analyse(true); });
+  $('#bars').addEventListener('click', e => { const row = e.target.closest('.bar-row'); if (!row) return; state.selected = row.dataset.id; $$('.bar-row').forEach(r => r.setAttribute('aria-pressed', String(r === row))); renderInspector(true); });
+  const view = t => { $('#viewChart').setAttribute('aria-pressed', String(!t)); $('#viewTable').setAttribute('aria-pressed', String(t)); $('#chartView').hidden = t; $('#tableView').hidden = !t; };
+  $('#viewChart').onclick = () => view(false); $('#viewTable').onclick = () => view(true);
+  $('#copyCsv').onclick = async () => { try { await navigator.clipboard.writeText(csv()); toast('Copied'); } catch { const r = document.createRange(); r.selectNodeContents($('#table')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Table selected. Press Ctrl+C to copy.'); } };
+  $('#file').addEventListener('change', e => handleFile(e.target.files[0]));
+  $('#fileClear').onclick = () => { clearFile(); analyse(true); };
+  const dt = $('#dropTarget'), drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(ev => dt.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => dt.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  dt.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
+  let sh; const shape = () => { $('#shKo').textContent = $('#shK').value; $('#shSo').textContent = (+$('#shS').value).toFixed(2); clearTimeout(sh); sh = setTimeout(renderShape, 40); };
+  $('#shK').addEventListener('input', shape); $('#shS').addEventListener('input', shape);
+  $$('#shapePresets .chip').forEach(b => b.onclick = () => { $('#shK').value = b.dataset.k; $('#shS').value = b.dataset.s; renderShape(); });
+  $('#nzP').addEventListener('input', renderNoise);
+  document.addEventListener('pointermove', e => { const p = e.target.closest && e.target.closest('.panel'); if (!p) return; const r = p.getBoundingClientRect(); p.style.setProperty('--mx', (e.clientX - r.left) + 'px'); p.style.setProperty('--my', (e.clientY - r.top) + 'px'); }, { passive: true });
+  addEventListener('scroll', hideTip, { passive: true });
+  let rz; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => renderSize(false), 120); }).observe($('#sizeChart'));
+  const retheme = () => { readColors(); [inHist, shapeHist, noiseHist].forEach(h => h.draw()); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+async function boot() {
+  readColors();
+  inHist = new Hist($('#inHist')); shapeHist = new Hist($('#shapeHist'), { color: 's-classical' }); noiseHist = new Hist($('#noiseHist'), { color: 's-classical' });
+  $('#text').value = SAMPLES[0].text;
+  startHero();
+  try { state.methods = await api('/api/methods'); }
+  catch { status('The Python server is not answering. Start it with: python app.py', true); return; }
+  state.enabled = new Set(state.methods.map(m => m.id));
+  buildControls(); markSample('demo'); wire();
+  renderShape(); analyse(true);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { [inHist, shapeHist, noiseHist].forEach(h => h.draw()); });
+}
+boot();
+window.entropyLab = { state };
+})();
+</script>
+</body>
+</html>
